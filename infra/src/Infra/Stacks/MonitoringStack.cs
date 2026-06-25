@@ -14,7 +14,7 @@ public class MonitoringStackProps : StackProps
 {
     public required ICluster EcsCluster { get; set; }
     public required IBaseService EcsService { get; set; }
-    public required IApplicationLoadBalancer LoadBalancer { get; set; }
+    public required ApplicationLoadBalancer LoadBalancer { get; set; }
 }
 
 public class MonitoringStack : Stack

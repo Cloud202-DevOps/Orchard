@@ -51,7 +51,7 @@ public class DatabaseStack : Stack
             {
                 Version = SqlServerEngineVersion.VER_15
             }),
-            InstanceType = InstanceType.Of(InstanceClass.M5, InstanceSize.LARGE),
+            InstanceType = Amazon.CDK.AWS.EC2.InstanceType.Of(InstanceClass.M5, InstanceSize.LARGE),
             Vpc = props.Vpc,
             VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PRIVATE_ISOLATED },
             SecurityGroups = new ISecurityGroup[] { props.DatabaseSecurityGroup },

@@ -27,7 +27,7 @@ public class ComputeStack : Stack
 {
     public ICluster EcsCluster { get; }
     public IBaseService EcsService { get; }
-    public IApplicationLoadBalancer LoadBalancer { get; }
+    public ApplicationLoadBalancer LoadBalancer { get; }
 
     public ComputeStack(Construct scope, string id, ComputeStackProps props) : base(scope, id, props)
     {
@@ -93,7 +93,7 @@ public class ComputeStack : Stack
         var logGroup = new LogGroup(this, "TaskLogGroup", new LogGroupProps
         {
             LogGroupName = $"/ecs/{config.ProjectName}/{config.EnvironmentName}",
-            Retention = RetentionDays.THIRTY_DAYS,
+            Retention = RetentionDays.ONE_MONTH,
             RemovalPolicy = RemovalPolicy.DESTROY
         });
 
@@ -125,7 +125,7 @@ public class ComputeStack : Stack
                 ["ORCHARD_DB_PORT"] = props.DatabasePort,
                 ["ORCHARD_ENVIRONMENT"] = config.EnvironmentName
             },
-            Secrets = new Dictionary<string, Secret>
+            Secrets = new Dictionary<string, Amazon.CDK.AWS.ECS.Secret>
             {
                 ["ORCHARD_DB_SECRET_ARN"] = Amazon.CDK.AWS.ECS.Secret.FromSecretsManager(props.DatabaseSecret)
             }
@@ -144,7 +144,7 @@ public class ComputeStack : Stack
             Vpc = props.Vpc,
             InternetFacing = true,
             SecurityGroup = props.AlbSecurityGroup,
-            LoadBalancerName = $"{config.ProjectName}-alb-{config.EnvironmentName}",
+            LoadBalancerName = $"orchard-poc-alb-{config.EnvironmentName}",
             VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PUBLIC }
         });
 

@@ -53,6 +53,6 @@ var monitoringStack = new MonitoringStack(app, $"{envConfig.ProjectName}-monitor
     LoadBalancer = computeStack.LoadBalancer
 });
 
-Tags.ApplyStandardTags(app, envConfig);
+Infra.Config.Tags.ApplyStandardTags(app, envConfig);
 
 app.Synth();
