@@ -1,0 +1,79 @@
+name: Deploy Orchard CMS to ECS
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-west-2
+  AWS_ACCOUNT_ID: "842387632939"
+  ECR_REPOSITORY: orchard-modernization-poc
+  ECS_CLUSTER: orchard-modernization-poc-cluster-dev
+  ECS_SERVICE: orchard-modernization-poc-service-dev
+
+jobs:
+  build-and-deploy:
+    name: Build, Push, Deploy
+    runs-on: windows-2022
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/github-actions-orchard-poc
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.ECR_REPOSITORY }}:${{ github.sha }} -t ${{ env.ECR_REPOSITORY }}:latest .
+
+      - name: Tag and push to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker tag ${{ env.ECR_REPOSITORY }}:${{ github.sha }} ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          docker tag ${{ env.ECR_REPOSITORY }}:latest ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+
+      - name: Update ECS service
+        run: |
+          aws ecs update-service `
+            --cluster ${{ env.ECS_CLUSTER }} `
+            --service ${{ env.ECS_SERVICE }} `
+            --force-new-deployment `
+            --region ${{ env.AWS_REGION }}
+
+      - name: Wait for service stability
+        run: |
+          aws ecs wait services-stable `
+            --cluster ${{ env.ECS_CLUSTER }} `
+            --services ${{ env.ECS_SERVICE }} `
+            --region ${{ env.AWS_REGION }}
+        timeout-minutes: 15
+
+      - name: Output deployment info
+        run: |
+          Write-Host "Deployment complete!"
+          Write-Host "Image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}"
+          Write-Host "Cluster: ${{ env.ECS_CLUSTER }}"
+          Write-Host "Service: ${{ env.ECS_SERVICE }}"

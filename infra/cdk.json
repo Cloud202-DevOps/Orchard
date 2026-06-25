@@ -1,0 +1,22 @@
+{
+  "app": "dotnet run --project src/Infra/Infra.csproj",
+  "watch": {
+    "include": ["**"],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "**/*.d.ts",
+      "**/*.js",
+      "node_modules",
+      "bin",
+      "obj"
+    ]
+  },
+  "context": {
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/core:target-partitions": ["aws"],
+    "@aws-cdk/aws-ecs:arnFormatIncludesClusterName": true,
+    "@aws-cdk/aws-ecs:disableExplicitDeploymentControllerForCircuitBreaker": true
+  }
+}

@@ -1,0 +1,899 @@
+{
+  "analysis_type": "mod",
+  "metadata": {
+    "repository": "orchard",
+    "analysis_date": "2026-06-23",
+    "td_version": "modernization-readiness-analysis",
+    "repo_type": "application",
+    "service_archetype": "stateful-crud",
+    "archetype_source": "auto-detected",
+    "archetype_justification": "The application manages persistent state (content items, users, settings) stored in SQL Server/SQL CE via NHibernate ORM. It exposes CRUD endpoints for content management with create, update, delete, and publish operations. Classified as stateful-crud.",
+    "priority": null,
+    "tags": [],
+    "context": null,
+    "preferences": null,
+    "surface_flags": {
+      "has_persistent_data_store": true,
+      "has_at_rest_data_surface": true,
+      "has_deployed_workload": false,
+      "has_api_surface": true,
+      "has_multi_instance_deployment": false,
+      "has_iac_provisioning_aws_resources": false
+    }
+  },
+  "overall_score": 1.70,
+  "classification": {
+    "tier": "Remediation Required",
+    "high_count": 9,
+    "medium_count": 5,
+    "low_count": 3,
+    "rule_matched": "2-11 High → Remediation Required",
+    "classification_consistency_check": "consistent"
+  },
+  "categories": [
+    {
+      "category_id": "INF",
+      "category": "Infrastructure & DevOps",
+      "numeric_score": 1.20,
+      "score_rating": "Not Ready",
+      "severity_status": "Critical"
+    },
+    {
+      "category_id": "APP",
+      "category": "Application Architecture",
+      "numeric_score": 2.17,
+      "score_rating": "Needs Work",
+      "severity_status": "Needs Work"
+    },
+    {
+      "category_id": "DATA",
+      "category": "Data Platform",
+      "numeric_score": 2.25,
+      "score_rating": "Needs Work",
+      "severity_status": "Needs Work"
+    },
+    {
+      "category_id": "SEC",
+      "category": "Security Baseline",
+      "numeric_score": 1.60,
+      "score_rating": "Needs Work",
+      "severity_status": "Critical"
+    },
+    {
+      "category_id": "OPS",
+      "category": "Operations & Observability",
+      "numeric_score": 1.29,
+      "score_rating": "Not Ready",
+      "severity_status": "Critical"
+    }
+  ],
+  "top_gaps": [
+    {
+      "question_id": "INF-Q1",
+      "title": "Managed Compute",
+      "score": 1,
+      "gap": "No managed compute — deployment via MSDeploy to traditional IIS hosting",
+      "impact": "Prevents elastic scaling and increases operational overhead"
+    },
+    {
+      "question_id": "INF-Q10",
+      "title": "Infrastructure as Code Coverage",
+      "score": 1,
+      "gap": "No IaC — all infrastructure manually provisioned",
+      "impact": "Non-reproducible environments, manual error-prone provisioning"
+    },
+    {
+      "question_id": "INF-Q2",
+      "title": "Managed Databases",
+      "score": 1,
+      "gap": "Database is SQL Server/SQL CE with no managed service evidence",
+      "impact": "Manual patching, backup, and scaling responsibility"
+    },
+    {
+      "question_id": "SEC-Q5",
+      "title": "Secrets Management",
+      "score": 1,
+      "gap": "Connection strings in Web.config with no secrets management",
+      "impact": "Credentials potentially exposed in source control"
+    },
+    {
+      "question_id": "INF-Q5",
+      "title": "Network Security",
+      "score": 1,
+      "gap": "No VPC, subnet, or security group configuration found",
+      "impact": "No evidence of network segmentation or isolation"
+    }
+  ],
+  "decomposition_strategy": {
+    "recommended_approach": "Strangler Fig (Parallel Track)",
+    "rationale": "62 identifiable modules with defined interfaces but shared NHibernate session and database schema. Strangler Fig enables incremental extraction.",
+    "effort_estimate": "Medium-High",
+    "patterns": ["Anti-corruption Layer", "Saga Pattern", "Event Sourcing", "Hexagonal Architecture"]
+  },
+  "findings": [
+    {
+      "question_id": "INF-Q1",
+      "category": "Infrastructure & DevOps",
+      "category_id": "INF",
+      "title": "No managed compute — traditional IIS deployment",
+      "description": "No managed compute infrastructure found. The application is deployed via MSDeploy to traditional IIS on Windows Server. No ECS, EKS, Lambda, or Fargate resources defined.",
+      "gap": "All compute is on traditional IIS hosting with no managed container orchestration or serverless.",
+      "recommendation": "Containerize the application using Windows containers on ECS Fargate as a first step. Long-term, migrate to .NET 8+ to enable Linux containers and serverless options.",
+      "severity": "High",
+      "priority": "P1",
+      "effort": "High",
+      "phase": 1,
+      "evidence": {"file": "lib/msdeploy/manifest.xml", "lines": null},
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": true
+      }
+    },
+    {
+      "question_id": "INF-Q2",
+      "category": "Infrastructure & DevOps",
+      "category_id": "INF",
+      "title": "Self-managed database — no RDS/Aurora",
+      "description": "The application uses SQL Server and SQL CE as database providers via NHibernate ORM. No managed database infrastructure is defined.",
+      "gap": "All databases are self-managed with no RDS/Aurora/managed service configuration.",
+      "recommendation": "Migrate to Amazon RDS for SQL Server (minimal code change) or Aurora PostgreSQL (leveraging NHibernate's PostgreSQL dialect).",
+      "severity": "High",
+      "priority": "P1",
+      "effort": "Medium",
+      "phase": 1,
+      "evidence": {"file": "src/Orchard/Data/Providers/SqlServerDataServicesProvider.cs", "lines": null},
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": true
+      }
+    },
+    {
+      "question_id": "INF-Q4",
+      "category": "Infrastructure & DevOps",
+      "category_id": "INF",
+      "title": "Internal messaging only — no managed cloud messaging",
+      "description": "Internal message bus and job queue modules exist but no managed messaging infrastructure (SQS, SNS, EventBridge, MSK) is configured.",
+      "gap": "Internal messaging exists but no managed cloud messaging for cross-service state changes or durable job processing.",
+      "recommendation": "When decomposing the monolith, introduce SQS for job queue durability and SNS/EventBridge for content lifecycle event publishing.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": {"file": "src/Orchard.Web/Modules/Orchard.MessageBus/", "lines": null},
+      "mod_metadata": {
+        "internal_score": 2,
+        "score_label": "Needs Work",
+        "archetype_calibrated": true,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "INF-Q5",
+      "category": "Infrastructure & DevOps",
+      "category_id": "INF",
+      "title": "No network security configuration",
+      "description": "No VPC, subnet, security group, or network segmentation configuration found in the repository.",
+      "gap": "No evidence of network security configuration.",
+      "recommendation": "Define VPC with public/private subnet tiers, least-privilege security groups, and deploy in private subnets behind an ALB.",
+      "severity": "High",
+      "priority": "P1",
+      "effort": "Medium",
+      "phase": 1,
+      "evidence": null,
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": true
+      }
+    },
+    {
+      "question_id": "INF-Q6",
+      "category": "Infrastructure & DevOps",
+      "category_id": "INF",
+      "title": "No managed API entry point",
+      "description": "No API Gateway, ALB, CloudFront, or AppSync configuration found. Service exposed directly via IIS.",
+      "gap": "No managed API entry point — service is exposed directly without gateway-level protections.",
+      "recommendation": "Deploy behind an ALB with health checks, or API Gateway for throttling and authentication offloading.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": {"file": "src/Orchard.Web/Web.config", "lines": null},
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "INF-Q7",
+      "category": "Infrastructure & DevOps",
+      "category_id": "INF",
+      "title": "No auto-scaling configured",
+      "description": "No auto-scaling configuration found. All capacity is statically provisioned.",
+      "gap": "No auto-scaling — all capacity is statically provisioned.",
+      "recommendation": "After containerizing, configure ECS service auto-scaling with target tracking policies.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": null,
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "INF-Q8",
+      "category": "Infrastructure & DevOps",
+      "category_id": "INF",
+      "title": "No backup or recovery configuration",
+      "description": "No backup configuration found. No AWS Backup plans, RDS backup retention, or S3 versioning.",
+      "gap": "No automated backup or recovery configuration.",
+      "recommendation": "After migrating to RDS, enable automated backups with PITR. Configure AWS Backup plans.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Low",
+      "phase": 2,
+      "evidence": null,
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "INF-Q9",
+      "category": "Infrastructure & DevOps",
+      "category_id": "INF",
+      "title": "No high availability configuration",
+      "description": "No multi-AZ configuration found. Single-instance deployment pattern via MSDeploy.",
+      "gap": "No high availability or fault isolation — single point of failure.",
+      "recommendation": "Deploy across multiple AZs with ALB cross-zone load balancing and Multi-AZ RDS.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": null,
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "INF-Q10",
+      "category": "Infrastructure & DevOps",
+      "category_id": "INF",
+      "title": "No Infrastructure as Code",
+      "description": "No IaC found — no Terraform, CloudFormation, CDK, or Helm. All infrastructure is manually provisioned.",
+      "gap": "0% IaC coverage — all infrastructure is manually provisioned.",
+      "recommendation": "Adopt AWS CDK (C# supported) or Terraform to define all infrastructure.",
+      "severity": "High",
+      "priority": "P1",
+      "effort": "Medium",
+      "phase": 1,
+      "evidence": null,
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": true
+      }
+    },
+    {
+      "question_id": "INF-Q11",
+      "category": "Infrastructure & DevOps",
+      "category_id": "INF",
+      "title": "CI exists but no CD — deployment is manual",
+      "description": "GitHub Actions CI pipelines exist for compilation and testing. No deployment automation exists.",
+      "gap": "Build and test are automated but deployment is manual.",
+      "recommendation": "Extend the GitHub Actions pipeline to include deployment stages using CDK deploy or CodeDeploy.",
+      "severity": "Medium",
+      "priority": "P1",
+      "effort": "Medium",
+      "phase": 1,
+      "evidence": {"file": ".github/workflows/compile.yml", "lines": null},
+      "mod_metadata": {
+        "internal_score": 2,
+        "score_label": "Needs Work",
+        "archetype_calibrated": false,
+        "core_question": true
+      }
+    },
+    {
+      "question_id": "APP-Q1",
+      "category": "Application Architecture",
+      "category_id": "APP",
+      "title": "Legacy .NET Framework 4.8 with ASP.NET MVC 5",
+      "description": "C# 7.3 on .NET Framework 4.8 with ASP.NET MVC 5.3. Legacy platform requiring migration to .NET 8+.",
+      "gap": ".NET Framework 4.8, C# 7.3, and ASP.NET MVC 5 are all regressed. Requires migration to .NET 8+ and ASP.NET Core.",
+      "recommendation": "Migrate to .NET 8+ with ASP.NET Core for modern cloud-native support, Linux containers, and AWS SDK v3.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "High",
+      "phase": 2,
+      "evidence": {"file": "src/Orchard/Orchard.Framework.csproj", "lines": null},
+      "mod_metadata": {
+        "internal_score": 2,
+        "score_label": "Needs Work",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "APP-Q2",
+      "category": "Application Architecture",
+      "category_id": "APP",
+      "title": "Modular monolith with shared database",
+      "description": "Single deployable unit with 62 modules sharing a NHibernate session and database schema.",
+      "gap": "Monolith with identifiable modules but shared database schemas and ORM session.",
+      "recommendation": "Begin with enforcing module boundaries, then apply Strangler Fig to extract high-value modules.",
+      "severity": "Medium",
+      "priority": "P1",
+      "effort": "High",
+      "phase": 2,
+      "evidence": {"file": "src/Orchard.Web/Modules/", "lines": null},
+      "mod_metadata": {
+        "internal_score": 2,
+        "score_label": "Needs Work",
+        "archetype_calibrated": false,
+        "core_question": true
+      }
+    },
+    {
+      "question_id": "APP-Q3",
+      "category": "Application Architecture",
+      "category_id": "APP",
+      "title": "All communication synchronous in-process",
+      "description": "All inter-module communication is synchronous in-process method calls via Autofac DI and event bus.",
+      "gap": "Primarily synchronous with internal job queue. No managed async messaging.",
+      "recommendation": "Introduce EventBridge for content lifecycle events and SQS for durable background jobs when decomposing.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": {"file": "src/Orchard/Events/DefaultOrchardEventBus.cs", "lines": null},
+      "mod_metadata": {
+        "internal_score": 2,
+        "score_label": "Needs Work",
+        "archetype_calibrated": true,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "APP-Q4",
+      "category": "Application Architecture",
+      "category_id": "APP",
+      "title": "Inconsistent long-running process handling",
+      "description": "Background task infrastructure and job queue exist but long-running operations (import/export, indexing) may block request threads.",
+      "gap": "Some background job infrastructure exists but inconsistent patterns.",
+      "recommendation": "Offload long-running operations to Step Functions or SQS-backed workers with status polling.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 3,
+      "evidence": {"file": "src/Orchard/Tasks/BackgroundService.cs", "lines": null},
+      "mod_metadata": {
+        "internal_score": 2,
+        "score_label": "Needs Work",
+        "archetype_calibrated": true,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "APP-Q5",
+      "category": "Application Architecture",
+      "category_id": "APP",
+      "title": "No API versioning strategy",
+      "description": "No explicit API versioning. Web API routes do not include version prefixes.",
+      "gap": "No API versioning — breaking changes affect all consumers simultaneously.",
+      "recommendation": "Adopt URL-path versioning (e.g., /api/v1/) when modernizing the API layer.",
+      "severity": "Low",
+      "priority": "P2",
+      "effort": "Low",
+      "phase": 3,
+      "evidence": {"file": "src/Orchard/WebApi/Routes/IHttpRouteProvider.cs", "lines": null},
+      "mod_metadata": {
+        "internal_score": 2,
+        "score_label": "Needs Work",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "APP-Q6",
+      "category": "Application Architecture",
+      "category_id": "APP",
+      "title": "Configuration-based service resolution",
+      "description": "Internal services resolved via Autofac DI. External endpoints configured via Web.config, not hard-coded.",
+      "gap": "No dynamic service discovery for external services — configuration-based.",
+      "recommendation": "When decomposing, adopt AWS Cloud Map or ECS service connect.",
+      "severity": "Low",
+      "priority": "P2",
+      "effort": "Low",
+      "phase": 3,
+      "evidence": {"file": "src/Orchard/Environment/ShellBuilders/ShellContainerFactory.cs", "lines": null},
+      "mod_metadata": {
+        "internal_score": 3,
+        "score_label": "Partial",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "DATA-Q1",
+      "category": "Data Platform",
+      "category_id": "DATA",
+      "title": "Media stored on local file system",
+      "description": "Unstructured data stored via FileSystemStorageProvider on local disk. No S3 or cloud storage.",
+      "gap": "Unstructured data on local file systems — not scalable, creates deployment coupling.",
+      "recommendation": "Migrate media storage to Amazon S3. Implement S3-backed IStorageProvider.",
+      "severity": "High",
+      "priority": "P1",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": {"file": "src/Orchard/FileSystems/Media/FileSystemStorageProvider.cs", "lines": null},
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": true
+      }
+    },
+    {
+      "question_id": "DATA-Q2",
+      "category": "Data Platform",
+      "category_id": "DATA",
+      "title": "Repository pattern exists but inconsistently applied",
+      "description": "IRepository<T> and NHibernate Repository exist in core but modules can bypass via direct session access.",
+      "gap": "Repository pattern exists but inconsistently applied across modules.",
+      "recommendation": "Enforce repository pattern consistently. Remove direct ISessionLocator usage from modules.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": {"file": "src/Orchard/Data/IRepository.cs", "lines": null},
+      "mod_metadata": {
+        "internal_score": 2,
+        "score_label": "Needs Work",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "DATA-Q3",
+      "category": "Data Platform",
+      "category_id": "DATA",
+      "title": "No database engine version pinning",
+      "description": "No explicit database engine version pinning. SQL CE (bundled) is EOL. Production SQL Server version unknown.",
+      "gap": "No version pinning for production database. SQL CE (development) is EOL.",
+      "recommendation": "Pin database engine version in IaC when migrating to RDS. Verify current SQL Server is not EOL.",
+      "severity": "Medium",
+      "priority": "P1",
+      "effort": "Low",
+      "phase": 1,
+      "evidence": {"file": "lib/sqlce/", "lines": null},
+      "mod_metadata": {
+        "internal_score": 2,
+        "score_label": "Needs Work",
+        "archetype_calibrated": false,
+        "core_question": true
+      }
+    },
+    {
+      "question_id": "SEC-Q3",
+      "category": "Security Baseline",
+      "category_id": "SEC",
+      "title": "Cookie-based forms authentication — not token-based",
+      "description": "Forms Authentication (cookie-based) rather than OAuth2/JWT. Optional OpenId module exists but is not default.",
+      "gap": "Cookie-based forms authentication rather than token-based auth.",
+      "recommendation": "Migrate to token-based authentication. Integrate with Amazon Cognito or enable OpenId module.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": {"file": "src/Orchard.Web/Web.config", "lines": null},
+      "mod_metadata": {
+        "internal_score": 2,
+        "score_label": "Needs Work",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "SEC-Q4",
+      "category": "Security Baseline",
+      "category_id": "SEC",
+      "title": "Self-managed authentication — no centralized IdP",
+      "description": "Application manages its own authentication via FormsAuthenticationService and local user store.",
+      "gap": "Application manages its own authentication with local user store — no centralized IdP.",
+      "recommendation": "Integrate with Amazon Cognito or enterprise IdP as primary authentication source.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": {"file": "src/Orchard/Security/Providers/FormsAuthenticationService.cs", "lines": null},
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "SEC-Q5",
+      "category": "Security Baseline",
+      "category_id": "SEC",
+      "title": "Credentials in config files — no secrets management",
+      "description": "Connection strings in Web.config with no Secrets Manager, Vault, or encrypted parameter store.",
+      "gap": "Credentials stored in configuration files with no secrets management, no encryption, no rotation.",
+      "recommendation": "Migrate all secrets to AWS Secrets Manager with automated rotation.",
+      "severity": "High",
+      "priority": "P1",
+      "effort": "Low",
+      "phase": 1,
+      "evidence": {"file": "src/Orchard.Web/Web.config", "lines": null},
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": true
+      }
+    },
+    {
+      "question_id": "SEC-Q6",
+      "category": "Security Baseline",
+      "category_id": "SEC",
+      "title": "No compute hardening or patching strategy",
+      "description": "No SSM Patch Manager, AWS Inspector, vulnerability scanning, or hardened images.",
+      "gap": "No patching strategy, no vulnerability scanning, no compute hardening.",
+      "recommendation": "After containerizing, use ECR image scanning and AWS Inspector. Use hardened AMIs if on EC2.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": null,
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "SEC-Q7",
+      "category": "Security Baseline",
+      "category_id": "SEC",
+      "title": "Code analysis rulesets but no SAST/dependency scanning in CI",
+      "description": "Code analysis rulesets integrated into build. No Dependabot, no SAST tool, no container scanning.",
+      "gap": "Build-time code analysis exists but no dedicated SAST or dependency vulnerability scanning in CI/CD.",
+      "recommendation": "Add Dependabot for NuGet dependency scanning. Integrate SonarQube or Semgrep SAST.",
+      "severity": "Low",
+      "priority": "P2",
+      "effort": "Low",
+      "phase": 3,
+      "evidence": {"file": "src/OrchardBasicCorrectness.ruleset", "lines": null},
+      "mod_metadata": {
+        "internal_score": 3,
+        "score_label": "Partial",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "OPS-Q1",
+      "category": "Operations & Observability",
+      "category_id": "OPS",
+      "title": "No distributed tracing",
+      "description": "No OpenTelemetry, X-Ray, or tracing SDK. Glimpse is a dev-time profiler, not production tracing.",
+      "gap": "No distributed tracing — debugging production request flows is not possible.",
+      "recommendation": "Add OpenTelemetry .NET instrumentation with X-Ray exporter.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": {"file": "src/Orchard.Web/Web.config", "lines": null},
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "OPS-Q3",
+      "category": "Operations & Observability",
+      "category_id": "OPS",
+      "title": "No business metrics",
+      "description": "No custom business metrics. Only log4net operational logging.",
+      "gap": "No business outcome metrics — cannot measure content engagement or user activity.",
+      "recommendation": "Instrument key business metrics and publish to CloudWatch custom metrics.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Low",
+      "phase": 3,
+      "evidence": null,
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "OPS-Q4",
+      "category": "Operations & Observability",
+      "category_id": "OPS",
+      "title": "No alerting or anomaly detection",
+      "description": "No CloudWatch alarms, no PagerDuty/OpsGenie integration, no monitoring.",
+      "gap": "No alerting configured — failures go undetected.",
+      "recommendation": "Configure CloudWatch alarms on error rates and latency. Enable anomaly detection.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Low",
+      "phase": 3,
+      "evidence": null,
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "OPS-Q6",
+      "category": "Operations & Observability",
+      "category_id": "OPS",
+      "title": "BDD tests exist but no integration tests against deployed services",
+      "description": "SpecFlow BDD tests and unit tests run in CI but test in-process, not against deployed infrastructure.",
+      "gap": "No integration tests against deployed services, no contract tests.",
+      "recommendation": "Add integration tests with real SQL Server (TestContainers). Add contract tests when decomposing.",
+      "severity": "Medium",
+      "priority": "P1",
+      "effort": "Medium",
+      "phase": 2,
+      "evidence": {"file": "src/Orchard.Specs/", "lines": null},
+      "mod_metadata": {
+        "internal_score": 2,
+        "score_label": "Needs Work",
+        "archetype_calibrated": false,
+        "core_question": true
+      }
+    },
+    {
+      "question_id": "OPS-Q7",
+      "category": "Operations & Observability",
+      "category_id": "OPS",
+      "title": "No incident response automation",
+      "description": "No runbooks, SSM Automation documents, or self-healing patterns.",
+      "gap": "No runbooks — incident response is entirely ad hoc.",
+      "recommendation": "Create runbooks for common incidents. Implement as SSM Automation documents.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Medium",
+      "phase": 3,
+      "evidence": null,
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "OPS-Q8",
+      "category": "Operations & Observability",
+      "category_id": "OPS",
+      "title": "No observability ownership",
+      "description": "No CODEOWNERS for monitoring, no per-service dashboards, no named alarm owners.",
+      "gap": "No observability ownership — monitoring is reactive and fragmented.",
+      "recommendation": "Define observability ownership with CODEOWNERS and per-module dashboards.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Low",
+      "phase": 3,
+      "evidence": null,
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    },
+    {
+      "question_id": "OPS-Q9",
+      "category": "Operations & Observability",
+      "category_id": "OPS",
+      "title": "No resource tagging",
+      "description": "No IaC exists to tag resources. No tagging standard or enforcement.",
+      "gap": "No tags found on resources.",
+      "recommendation": "Establish tagging standard and enforce via IaC when implementing infrastructure.",
+      "severity": "Medium",
+      "priority": "P2",
+      "effort": "Low",
+      "phase": 2,
+      "evidence": null,
+      "mod_metadata": {
+        "internal_score": 1,
+        "score_label": "Not Ready",
+        "archetype_calibrated": false,
+        "core_question": false
+      }
+    }
+  ],
+  "evaluations": [
+    {
+      "question_id": "INF-Q3",
+      "category_id": "INF",
+      "title": "Workflow Orchestration",
+      "status": "not_evaluated_archetype",
+      "score": null,
+      "reason": "stateful-crud archetype — Orchard.Workflows module provides content lifecycle workflows but dedicated infrastructure orchestration (Step Functions, Temporal) is not expected for CRUD operations."
+    },
+    {
+      "question_id": "SEC-Q1",
+      "category_id": "SEC",
+      "title": "Audit Logging",
+      "status": "not_evaluated_surface_flag",
+      "score": null,
+      "reason": "has_iac_provisioning_aws_resources=false — CloudTrail is an account-level concern. This application repo does not provision AWS resources."
+    },
+    {
+      "question_id": "SEC-Q2",
+      "category_id": "SEC",
+      "title": "Encryption at Rest",
+      "status": "not_evaluated_surface_flag",
+      "score": null,
+      "reason": "has_iac_provisioning_aws_resources=false — encryption at rest is configured on infrastructure side which is absent from this repo."
+    },
+    {
+      "question_id": "OPS-Q2",
+      "category_id": "OPS",
+      "title": "SLO Definitions",
+      "status": "not_evaluated_surface_flag",
+      "score": null,
+      "reason": "has_deployed_workload=false — SLOs cannot be assessed from source code alone without deployment infrastructure."
+    },
+    {
+      "question_id": "OPS-Q5",
+      "category_id": "OPS",
+      "title": "Deployment Strategy",
+      "status": "not_evaluated_surface_flag",
+      "score": null,
+      "reason": "has_deployed_workload=false — no deployed workload defined in this repo. Deployment orchestration may exist in a separate repo."
+    },
+    {
+      "question_id": "DATA-Q4",
+      "category_id": "DATA",
+      "title": "Stored Procedures and Schema Complexity",
+      "status": "pass",
+      "score": 4,
+      "reason": "Score 4 — no stored procedures, triggers, or proprietary SQL. All business logic in C# application layer via NHibernate ORM."
+    }
+  ],
+  "pathways": [
+    {
+      "id": "move-to-cloud-native",
+      "name": "Move to Cloud Native",
+      "status": "Triggered",
+      "priority": "High",
+      "effort": "High",
+      "key_trigger_criteria": "APP-Q2=2 (monolith with shared DB) AND INF-Q1=1 (no managed compute)",
+      "triggering_questions": [
+        {"question_id": "APP-Q2", "score": 2, "note": "Modular monolith with shared database schema"},
+        {"question_id": "INF-Q1", "score": 1, "note": "No managed compute — traditional IIS"},
+        {"question_id": "APP-Q3", "score": 2, "note": "All synchronous in-process communication"}
+      ],
+      "detail": {
+        "aws_services": ["Lambda", "API Gateway", "Step Functions", "EventBridge", "ECS", "EKS"],
+        "patterns": ["Strangler Fig", "Anti-corruption Layer", "Event Sourcing", "Saga"],
+        "immediate_actions": ["Enforce module boundaries", "Containerize as-is", "Extract first service via Strangler Fig"]
+      },
+      "not_triggered_reason": null
+    },
+    {
+      "id": "move-to-containers",
+      "name": "Move to Containers",
+      "status": "Triggered",
+      "priority": "Medium",
+      "effort": "Medium",
+      "key_trigger_criteria": "INF-Q1=1 (EC2/VM-based) AND no container definitions found",
+      "triggering_questions": [
+        {"question_id": "INF-Q1", "score": 1, "note": "No managed compute, no containers"}
+      ],
+      "detail": {
+        "aws_services": ["ECS", "Fargate", "ECR", "App Runner"],
+        "patterns": ["Lift-and-containerize"],
+        "immediate_actions": ["Create Windows container Dockerfile", "Set up ECR repository", "Deploy to ECS Fargate"]
+      },
+      "not_triggered_reason": null
+    },
+    {
+      "id": "move-to-open-source",
+      "name": "Move to Open Source",
+      "status": "Not Triggered",
+      "priority": null,
+      "effort": null,
+      "key_trigger_criteria": "DATA-Q4=4 — no stored procedures or proprietary SQL. NHibernate ORM supports multiple engines making migration straightforward without schema conversion.",
+      "triggering_questions": [
+        {"question_id": "DATA-Q4", "score": 4, "note": "No stored procedures — condition not met"}
+      ],
+      "detail": null,
+      "not_triggered_reason": "DATA-Q4=4 (no stored procedures). While SQL Server is in use, the absence of proprietary SQL and the presence of NHibernate PostgreSQL dialect support means engine migration is already feasible without schema conversion tools."
+    },
+    {
+      "id": "move-to-managed-databases",
+      "name": "Move to Managed Databases",
+      "status": "Triggered",
+      "priority": "High",
+      "effort": "Medium",
+      "key_trigger_criteria": "INF-Q2=1 (self-managed database)",
+      "triggering_questions": [
+        {"question_id": "INF-Q2", "score": 1, "note": "SQL Server/SQL CE self-managed, no RDS"},
+        {"question_id": "DATA-Q3", "score": 2, "note": "No version pinning, SQL CE EOL"}
+      ],
+      "detail": {
+        "aws_services": ["RDS SQL Server", "Aurora PostgreSQL", "RDS MySQL"],
+        "migration_tools": ["AWS DMS", "AWS SCT"],
+        "immediate_actions": ["Provision RDS SQL Server", "Update connection string", "Enable automated backups"]
+      },
+      "not_triggered_reason": null
+    },
+    {
+      "id": "move-to-managed-analytics",
+      "name": "Move to Managed Analytics",
+      "status": "Not Triggered",
+      "priority": null,
+      "effort": null,
+      "key_trigger_criteria": "No data processing workloads detected in the repository. No streaming, ETL, or analytics artifacts found.",
+      "triggering_questions": [],
+      "detail": null,
+      "not_triggered_reason": "No evidence of data processing workloads. The application is a CMS, not a data pipeline."
+    },
+    {
+      "id": "move-to-modern-devops",
+      "name": "Move to Modern DevOps",
+      "status": "Triggered",
+      "priority": "High",
+      "effort": "Medium",
+      "key_trigger_criteria": "INF-Q10=1 (no IaC) AND INF-Q11=2 (CI only, no CD)",
+      "triggering_questions": [
+        {"question_id": "INF-Q10", "score": 1, "note": "No IaC — all manual"},
+        {"question_id": "INF-Q11", "score": 2, "note": "CI exists but no CD automation"},
+        {"question_id": "OPS-Q6", "score": 2, "note": "BDD tests but no integration tests against deployed services"}
+      ],
+      "detail": {
+        "aws_services": ["CDK", "CloudFormation", "CodePipeline", "CodeBuild", "CodeDeploy"],
+        "immediate_actions": ["Create CDK project for infrastructure", "Add deployment stage to GitHub Actions", "Implement environment promotion"]
+      },
+      "not_triggered_reason": null
+    },
+    {
+      "id": "move-to-ai",
+      "name": "Move to AI",
+      "status": "Not Triggered",
+      "priority": null,
+      "effort": null,
+      "key_trigger_criteria": "No AI/agent intent detected in portfolio or service context.",
+      "triggering_questions": [],
+      "detail": null,
+      "not_triggered_reason": "No AI/agent intent detected in portfolio or service context."
+    }
+  ],
+  "filter_vocab": {
+    "categories": ["Infrastructure & DevOps", "Application Architecture", "Data Platform", "Security Baseline", "Operations & Observability"],
+    "severities": ["High", "Medium", "Low"],
+    "priorities": ["P1", "P2"]
+  }
+}

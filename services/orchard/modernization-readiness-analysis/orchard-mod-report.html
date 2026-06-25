@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>orchard - Modernization Readiness Analysis Report</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #1a1a2e; line-height: 1.6; }
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+header { background: linear-gradient(135deg, #232f3e 0%, #37475a 100%); color: white; padding: 32px; border-radius: 12px; margin-bottom: 24px; }
+header h1 { font-size: 24px; margin-bottom: 8px; }
+header .subtitle { opacity: 0.85; font-size: 14px; }
+.executive-summary { background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.executive-summary h2 { font-size: 18px; margin-bottom: 16px; color: #232f3e; }
+.status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+.status-remediation { background: #fef3e2; color: #d4760a; }
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.stat-card .number { font-size: 36px; font-weight: 700; }
+.stat-card .label { font-size: 13px; color: #666; margin-top: 4px; }
+.stat-high .number { color: #d32f2f; }
+.stat-medium .number { color: #f57c00; }
+.stat-low .number { color: #fbc02d; }
+.stat-total .number { color: #232f3e; }
+.section { background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.section h2 { font-size: 18px; margin-bottom: 16px; color: #232f3e; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #e0e0e0; }
+td { padding: 12px; border-bottom: 1px solid #f0f0f0; }
+tr:hover { background: #fafbfc; }
+.severity-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.severity-high { background: #ffebee; color: #c62828; }
+.severity-medium { background: #fff3e0; color: #e65100; }
+.severity-low { background: #fff8e1; color: #f9a825; }
+.category-status { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+.cat-critical { background: #ffebee; color: #c62828; }
+.cat-needs-work { background: #fff3e0; color: #e65100; }
+.cat-ready { background: #e8f5e9; color: #2e7d32; }
+.finding-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+.finding-card h3 { font-size: 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.finding-card .category-line { font-size: 12px; color: #666; margin-bottom: 8px; }
+.finding-card .subsection { margin-top: 8px; }
+.finding-card .subsection-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; }
+.finding-card .subsection-content { font-size: 13px; }
+.tabs { display: flex; border-bottom: 2px solid #e0e0e0; margin-bottom: 16px; gap: 4px; }
+.tab { padding: 8px 16px; cursor: pointer; font-size: 14px; font-weight: 500; border-radius: 6px 6px 0 0; color: #666; }
+.tab.active { background: #232f3e; color: white; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+.pathway-table td:nth-child(3) { font-weight: 600; }
+.triggered { color: #c62828; }
+.not-triggered { color: #2e7d32; }
+footer { text-align: center; padding: 24px; color: #888; font-size: 12px; }
+.recommendation-block { background: #f8f9fa; border-left: 4px solid #232f3e; padding: 16px; border-radius: 0 8px 8px 0; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>orchard - Modernization Readiness Analysis Report</h1>
+<p class="subtitle">2026-06-23 &middot; C# (.NET Framework 4.8) &middot; 3,675 source files &middot; Application</p>
+</header>
+
+<div class="executive-summary">
+<h2>Executive Summary</h2>
+<p><strong>Repository Status:</strong> <span class="status-badge status-remediation">&#x1F7E0; Remediation Required</span></p>
+<p style="margin-top:12px"><strong>Key Findings:</strong> Orchard CMS is a legacy ASP.NET MVC 5 monolith on .NET Framework 4.8 with no cloud infrastructure, no IaC, no containers, and self-managed SQL Server databases. The application has strong modular architecture (62 modules with defined interfaces) but shares a single database and deployment unit. CI exists (GitHub Actions) but no deployment automation.</p>
+<p style="margin-top:12px"><strong>Remediation Plan:</strong> Phase 1 focuses on foundational infrastructure (IaC, managed database, secrets management, network security). Phase 2 addresses containerization, .NET modernization, and observability. Phase 3 tackles decomposition and advanced operational practices.</p>
+<p style="margin-top:12px"><strong>Recommended Actions:</strong></p>
+<ol style="margin-top:8px;padding-left:20px;font-size:14px">
+<li>Implement IaC (AWS CDK with C#) for all infrastructure and establish CI/CD deployment pipeline</li>
+<li>Migrate database to Amazon RDS for SQL Server and secrets to AWS Secrets Manager</li>
+<li>Containerize the application (Windows containers on ECS Fargate) as a stepping stone to decomposition</li>
+</ol>
+</div>
+
+<div class="stats-row">
+<div class="stat-card stat-total"><div class="number">17</div><div class="label">Total Findings</div></div>
+<div class="stat-card stat-high"><div class="number">9</div><div class="label">High Severity</div></div>
+<div class="stat-card stat-medium"><div class="number">5</div><div class="label">Medium Severity</div></div>
+<div class="stat-card stat-low"><div class="number">3</div><div class="label">Low Severity</div></div>
+</div>
+
+<div class="section">
+<h2>Technology Stack</h2>
+<table>
+<tr><th>Attribute</th><th>Value</th></tr>
+<tr><td>Language</td><td>C# 7.3</td></tr>
+<tr><td>Framework</td><td>ASP.NET MVC 5.3 / .NET Framework 4.8</td></tr>
+<tr><td>ORM</td><td>NHibernate 5.6 / FluentNHibernate 3.4</td></tr>
+<tr><td>Database</td><td>SQL Server / SQL CE</td></tr>
+<tr><td>CI/CD</td><td>GitHub Actions (build/test only)</td></tr>
+<tr><td>Priority</td><td>—</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Category Breakdown</h2>
+<table>
+<tr><th>Category</th><th>Score</th><th>Rating</th><th>Status</th></tr>
+<tr><td>Infrastructure &amp; DevOps (INF)</td><td>1.20 / 4.0</td><td>&#x274C; Not Ready</td><td><span class="category-status cat-critical">Critical</span></td></tr>
+<tr><td>Application Architecture (APP)</td><td>2.17 / 4.0</td><td>&#x1F7E0; Needs Work</td><td><span class="category-status cat-needs-work">Needs Work</span></td></tr>
+<tr><td>Data Platform (DATA)</td><td>2.25 / 4.0</td><td>&#x1F7E0; Needs Work</td><td><span class="category-status cat-needs-work">Needs Work</span></td></tr>
+<tr><td>Security Baseline (SEC)</td><td>1.60 / 4.0</td><td>&#x1F7E0; Needs Work</td><td><span class="category-status cat-critical">Critical</span></td></tr>
+<tr><td>Operations &amp; Observability (OPS)</td><td>1.29 / 4.0</td><td>&#x274C; Not Ready</td><td><span class="category-status cat-critical">Critical</span></td></tr>
+<tr style="font-weight:700"><td>Overall</td><td>1.70 / 4.0</td><td>&#x1F7E0; Needs Work</td><td></td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Detailed Findings</h2>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-high">HIGH</span> INF-Q1: Managed Compute</h3>
+<div class="category-line">Category: Infrastructure &amp; DevOps</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">No managed compute infrastructure found. The application is deployed via MSDeploy to traditional IIS on Windows Server. No ECS, EKS, Lambda, or Fargate resources defined.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Containerize the application using Windows containers on ECS Fargate. Long-term, migrate to .NET 8+ for Linux containers and serverless options.</div></div>
+</div>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-high">HIGH</span> INF-Q2: Managed Databases</h3>
+<div class="category-line">Category: Infrastructure &amp; DevOps</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">SQL Server and SQL CE as database providers via NHibernate. No managed database infrastructure (RDS, Aurora) defined.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Migrate to Amazon RDS for SQL Server (minimal code change) or Aurora PostgreSQL (leveraging existing PostgreSQL dialect).</div></div>
+</div>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-high">HIGH</span> INF-Q5: Network Security</h3>
+<div class="category-line">Category: Infrastructure &amp; DevOps</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">No VPC, subnet, security group, or network segmentation configuration found.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Define VPC with public/private subnet tiers, least-privilege security groups, and deploy in private subnets behind an ALB.</div></div>
+</div>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-high">HIGH</span> INF-Q10: Infrastructure as Code Coverage</h3>
+<div class="category-line">Category: Infrastructure &amp; DevOps</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">No IaC found. No Terraform, CloudFormation, CDK, or Helm. All infrastructure is manually provisioned.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Adopt AWS CDK (C# supported, aligning with team skills) or Terraform to define all infrastructure.</div></div>
+</div>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-high">HIGH</span> SEC-Q5: Secrets Management</h3>
+<div class="category-line">Category: Security Baseline</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">Connection strings in Web.config with no Secrets Manager, Vault, or encrypted parameter store. No rotation mechanism.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Migrate all secrets to AWS Secrets Manager with automated rotation. Remove plaintext credentials from configuration files.</div></div>
+</div>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-high">HIGH</span> DATA-Q1: Unstructured Data Storage</h3>
+<div class="category-line">Category: Data Platform</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">Unstructured data stored via FileSystemStorageProvider on local disk. No S3 or cloud storage configured.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Migrate media storage to Amazon S3. Implement S3-backed IStorageProvider. Add CloudFront for delivery.</div></div>
+</div>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-medium">MEDIUM</span> INF-Q11: CI/CD Automation</h3>
+<div class="category-line">Category: Infrastructure &amp; DevOps</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">GitHub Actions CI pipelines exist for compilation and testing. No deployment automation — no CD pipeline deploys to any environment.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Extend pipeline to include deployment stages using CDK deploy or CodeDeploy with environment promotion.</div></div>
+</div>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-medium">MEDIUM</span> APP-Q1: Programming Languages</h3>
+<div class="category-line">Category: Application Architecture</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">C# 7.3 targeting .NET Framework 4.8 with ASP.NET MVC 5.3. Legacy platform — not .NET Core/.NET 6+.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Migrate to .NET 8+ with ASP.NET Core for modern cloud-native support, Linux containers, and AWS SDK v3.</div></div>
+</div>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-medium">MEDIUM</span> APP-Q2: Monolith vs Microservices</h3>
+<div class="category-line">Category: Application Architecture</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">Single deployable unit with 62 modules sharing a single NHibernate session and database schema.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Enforce module boundaries, separate schemas per module, then apply Strangler Fig for extraction.</div></div>
+</div>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-medium">MEDIUM</span> OPS-Q6: Integration Testing</h3>
+<div class="category-line">Category: Operations &amp; Observability</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">SpecFlow BDD tests exist (29 features) and run in CI, but test in-process — not against deployed services.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Add integration tests with real SQL Server (TestContainers). Add contract tests when decomposing.</div></div>
+</div>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-low">LOW</span> APP-Q5: API Versioning Strategy</h3>
+<div class="category-line">Category: Application Architecture</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">No explicit API versioning strategy. Web API routes do not include version prefixes.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Adopt URL-path versioning (e.g., /api/v1/) when modernizing the API layer.</div></div>
+</div>
+
+<div class="finding-card">
+<h3><span class="severity-badge severity-low">LOW</span> SEC-Q7: Application Security Pipeline</h3>
+<div class="category-line">Category: Security Baseline</div>
+<div class="subsection"><div class="subsection-title">Finding</div><div class="subsection-content">Code analysis rulesets exist and are integrated into build. No dedicated SAST tool or dependency scanning in CI/CD.</div></div>
+<div class="subsection"><div class="subsection-title">Recommendation</div><div class="subsection-content">Add Dependabot for NuGet dependency scanning. Integrate SonarQube or Semgrep SAST.</div></div>
+</div>
+
+</div>
+
+<div class="section">
+<h2>AWS Modernization Pathways</h2>
+<table class="pathway-table">
+<tr><th>#</th><th>Pathway</th><th>Status</th><th>Priority</th><th>Effort</th></tr>
+<tr><td>1</td><td>Move to Cloud Native</td><td class="triggered">Triggered</td><td>High</td><td>High</td></tr>
+<tr><td>2</td><td>Move to Containers</td><td class="triggered">Triggered</td><td>Medium</td><td>Medium</td></tr>
+<tr><td>3</td><td>Move to Open Source</td><td class="not-triggered">Not Triggered</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>4</td><td>Move to Managed Databases</td><td class="triggered">Triggered</td><td>High</td><td>Medium</td></tr>
+<tr><td>5</td><td>Move to Managed Analytics</td><td class="not-triggered">Not Triggered</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>6</td><td>Move to Modern DevOps</td><td class="triggered">Triggered</td><td>High</td><td>Medium</td></tr>
+<tr><td>7</td><td>Move to AI</td><td class="not-triggered">Not Triggered</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+</div>
+
+<div class="recommendation-block">
+<strong>&#x1F7E0; Significant Modernization Required</strong>
+<p style="margin-top:8px">Top 3 recommendations:</p>
+<ol style="margin-top:8px;padding-left:20px;font-size:14px">
+<li><strong>INF-Q10 / INF-Q11:</strong> Implement IaC with AWS CDK (C#) and extend CI/CD pipeline with deployment automation</li>
+<li><strong>INF-Q2 / SEC-Q5:</strong> Migrate database to RDS for SQL Server and secrets to AWS Secrets Manager</li>
+<li><strong>INF-Q1:</strong> Containerize with Windows containers on ECS Fargate as foundation for modernization</li>
+</ol>
+</div>
+
+<footer>
+Generated by AWS Transform &middot; Modernization Readiness Analysis Report
+</footer>
+</div>
+</body>
+</html>

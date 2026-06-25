@@ -1,0 +1,58 @@
+# Build artifacts
+build/
+buildserver/
+artifacts/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vs/
+*.user
+*.suo
+
+# Documentation (not needed in container)
+docs/
+ATXDocumentation/
+services/
+*.md
+!src/Orchard.Web/Modules/Markdown/*.md
+
+# Test projects (not needed in container)
+src/Orchard.Tests/
+src/Orchard.Tests.Modules/
+src/Orchard.Core.Tests/
+src/Orchard.Web.Tests/
+src/Orchard.Azure.Tests/
+src/Orchard.Specs/
+
+# Infrastructure (not needed in container)
+infra/
+
+# CI/CD
+.github/
+
+# NuGet packages (restored during build)
+src/packages/
+
+# Node modules (frontend build)
+node_modules/
+src/Orchard.Web/Modules/**/node_modules/
+
+# Local development files
+*.ncrunchproject
+*.ncrunchsolution
+*.DotSettings
+*.DotSettings.user
+launchSettings.json
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Deployment scripts (not needed in container)
+deploy.ps1
+deploy.cmd
+.deployment
